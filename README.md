@@ -4,6 +4,8 @@ Philter Diffuse provides mathematical guarantees for PII count aggregations usin
 
 It uses the Discrete Laplace mechanism to privatize PII counts and generates compliance-ready reports with epsilon (privacy loss) interpretation. The tool also features persistent privacy budget tracking to prevent privacy loss exhaustion over time.
 
+Designed to be used with [Phileas](https://www.github.com/philterd/phileas) and [Philter](https://www.github.com/philterd/philter).
+
 ## Installation
 
 ```bash
