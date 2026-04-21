@@ -1,6 +1,6 @@
 # Philter Diffuse
 
-Philter Diffuse provides mathematical guarantees for PII count aggregations using OpenDP.
+Philter Diffuse provides mathematical guarantees for PII count aggregations using [OpenDP](https://github.com/opendp/opendp).
 
 It uses the Discrete Laplace mechanism to privatize PII counts and generates compliance-ready reports with epsilon (privacy loss) interpretation. The tool also features persistent privacy budget tracking to prevent privacy loss exhaustion over time.
 
