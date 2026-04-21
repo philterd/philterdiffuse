@@ -130,6 +130,9 @@ class PhilterDiffuse:
         Checks against a persistent budget ceiling.
         """
         # 1. Calculate Epsilon for this query
+        if scale <= 0:
+            raise ValueError("Scale must be a positive number.")
+            
         epsilon_this_query = self.sensitivity / scale
         
         # 2. Check Budget
@@ -157,7 +160,8 @@ class PhilterDiffuse:
                 scale=float(scale)
             )
             # 4. Privatize and ensure no negative numbers
-            private_results = {k: max(0, measurement(v)) for k, v in raw_counts.items()}
+            # Cast counts to int for OpenDP compatibility (i32)
+            private_results = {k: max(0, measurement(int(v))) for k, v in raw_counts.items()}
 
         # 5. Update Budget if it was a valid query
         if not math.isinf(scale):

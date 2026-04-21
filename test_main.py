@@ -199,6 +199,51 @@ class TestPhilterDiffuse(unittest.TestCase):
         # We want to see the report, so we don't mock print here anymore
         self.engine.generate_audit_report(raw, private, epsilon)
 
+    def test_privatize_counts_edge_cases(self):
+        # Empty counts
+        res, eps, exh = self.engine.privatize_counts({}, scale=1.0)
+        self.assertEqual(res, {})
+        self.assertEqual(eps, 1.0)
+        self.assertFalse(exh)
+
+        # Scale zero or negative
+        with self.assertRaises(ValueError):
+            self.engine.privatize_counts({"ssn": 10}, scale=0)
+        with self.assertRaises(ValueError):
+            self.engine.privatize_counts({"ssn": 10}, scale=-1.0)
+
+        # Non-integer counts (float)
+        # Should be cast to int and run without error
+        res, eps, exh = self.engine.privatize_counts({"ssn": 10.9}, scale=1.0)
+        self.assertIn("ssn", res)
+        self.assertIsInstance(res["ssn"], int)
+
+    def test_mongo_uri_parsing(self):
+        # Test default DB name
+        with patch('main.MongoClient', mongomock.MongoClient):
+            engine = PhilterDiffuse("mongodb://localhost:27017/")
+            self.assertEqual(engine.db.name, "philter")
+            
+            # Test specified DB name
+            engine2 = PhilterDiffuse("mongodb://localhost:27017/my_analytics")
+            self.assertEqual(engine2.db.name, "my_analytics")
+
+    def test_budget_exact_ceiling(self):
+        engine = PhilterDiffuse(collection_name="exact_budget.json")
+        raw = {"ssn": 10}
+        # Ceiling is 1.0. Spent is 0.
+        # Query with scale 1.0 -> epsilon 1.0.
+        # Total spent becomes 1.0. This should be allowed.
+        _, eps, exh = engine.privatize_counts(raw, scale=1.0, budget_ceiling=1.0)
+        self.assertEqual(eps, 1.0)
+        self.assertFalse(exh)
+        self.assertEqual(engine._get_spent_epsilon(), 1.0)
+        
+        # Next query should be blocked
+        _, eps2, exh2 = engine.privatize_counts(raw, scale=1.0, budget_ceiling=1.0)
+        self.assertEqual(eps2, 0.0)
+        self.assertTrue(exh2)
+
 class TestCLI(unittest.TestCase):
     def test_cli_json_loading(self):
         """Test that the CLI correctly loads data when --input is provided."""
