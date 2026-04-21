@@ -41,6 +41,13 @@ pip install -r requirements.txt
    python main.py --input pii_counts.json --output privatized_counts.csv
    ```
 
+4. **Using Docker**
+   You can also run the tool using Docker:
+   ```bash
+   ./run-docker.sh
+   ```
+   This script builds the image and runs a sample privatization task using volume mounts.
+
 ## Privacy Budget Management
 
 Philter Diffuse tracks the total epsilon spent per collection (or JSON source) in a persistent metadata store. When using MongoDB, it is stored in the `privacy_metadata` collection. Otherwise, it is stored in a local file named `privacy_budget.json`.
