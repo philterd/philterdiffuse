@@ -41,22 +41,20 @@ pip install -r requirements.txt
 
 ## Privacy Budget Management
 
-Philter Diffuse tracks the total epsilon spent per collection (or JSON source) in a persistent metadata store:
-- **MongoDB**: Stored in the `privacy_metadata` collection.
-- **Local**: Stored in `privacy_budget.json` when using JSON files.
+Philter Diffuse tracks the total epsilon spent per collection (or JSON source) in a persistent metadata store. When using MongoDB, it is stored in the `privacy_metadata` collection. Otherwise, it is stored in a local file named `privacy_budget.json`.
 
 If the `--budget-ceiling` is reached, the tool will notify the user, apply infinite noise (effectively zeroing out or thresholding the results), and refuse to release further accurate information to protect privacy.
 
 ## CLI Options
 
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--input` | Path to a JSON document containing PII entity counts. | None |
-| `--mongo-uri` | MongoDB connection URI (format: `mongodb://host:port/database`). | `mongodb://localhost:27017/philter` |
-| `--scale` | Scale for Laplace noise (higher = more privacy). | `2.0` |
-| `--output` | Path to write the privatized PII counts to a CSV file. | **Required** |
-| `--threshold` | Counts below this threshold will be output as `None`. | `0` |
-| `--budget-ceiling` | The maximum total epsilon allowed per collection. | `10.0` |
+| Option | Description | Required? | Default |
+|--------|-------------|-----------|---------|
+| `--input` | Path to a JSON document containing PII entity counts. | Optional | None |
+| `--mongo-uri` | MongoDB connection URI (format: `mongodb://host:port/database`). | Optional | `mongodb://localhost:27017/philter` |
+| `--scale` | Scale for Laplace noise (higher = more privacy). | Optional | `2.0` |
+| `--output` | Path to write the privatized PII counts to a CSV file. | **Required** | None |
+| `--threshold` | Counts below this threshold will be output as `None`. | Optional | `0` |
+| `--budget-ceiling` | The maximum total epsilon allowed per collection. | Optional | `10.0` |
 
 ## License
 
