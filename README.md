@@ -6,6 +6,8 @@ It uses the Discrete Laplace mechanism to privatize PII counts and generates com
 
 Designed to be used with [Phileas](https://www.github.com/philterd/phileas) and [Philter](https://www.github.com/philterd/philter).
 
+View the documentation at https://philterd.github.io/philterdiffuse.
+
 ## Installation
 
 ```bash
