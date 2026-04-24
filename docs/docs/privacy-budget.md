@@ -1,33 +1,55 @@
 # Privacy Budget Management
 
-Differential privacy relies on a "privacy budget," often denoted by epsilon ($\epsilon$). Every time you query data and add noise, a portion of that budget is consumed. To prevent "privacy exhaustion"—where an attacker can reconstruct the original data by averaging multiple queries—Philter Diffuse tracks and limits the total budget spent.
+Differential privacy relies on the concept of a "privacy budget," typically denoted by the Greek letter epsilon ($\epsilon$). This budget represents the maximum cumulative privacy loss that an organization is willing to tolerate for a given dataset.
 
-## How it Works
+## The Core Concept: Epsilon ($\epsilon$)
 
-Philter Diffuse tracks the total epsilon spent per collection (or JSON source) in a persistent metadata store.
+In Philter Diffuse, $\epsilon$ is a measure of the information leak allowed for each query. 
 
-- **MongoDB Mode**: Spent epsilon is stored in a collection named `privacy_metadata` within the target database.
-- **JSON Mode**: Spent epsilon is stored in a local file named `privacy_budget.json`.
+*   **Calculation**: For the Discrete Laplace mechanism used here, epsilon for a single query is calculated as:
+    $$\epsilon = \frac{\Delta f}{\text{scale}}$$
+    Where $\Delta f$ is the **sensitivity** (always 1 for individual counts) and **scale** is the noise parameter provided by the user via `--scale`.
+*   **Default**: With a default scale of `2.0`, each query consumes $\epsilon = 1/2 = 0.5$.
 
-## Budget Ceiling
+### Why do we need a budget?
+Every time a privatized query is released, a small amount of information about the underlying data is leaked. If an attacker can query the same dataset multiple times with different noise, they could potentially average out the noise to reconstruct the original values. A privacy budget places a hard limit on this cumulative leakage.
 
-The `--budget-ceiling` option sets the maximum allowed cumulative epsilon for a given source.
+## Persistent Tracking
 
-If a new query would cause the total spent epsilon to exceed the budget ceiling:
+Philter Diffuse automatically tracks the cumulative epsilon spent for each unique data source (either a MongoDB collection or a JSON file). This tracking is **persistent**, meaning it survives between different executions of the tool.
 
-1. The tool will notify the user with a warning.
-2. It will apply "infinite noise," effectively zeroing out the results or returning non-useful data.
-3. No further accurate information will be released for that specific source until the budget is reset or the ceiling is increased.
+*   **MongoDB Mode**: The spent budget is stored in a collection named `privacy_metadata` within the same database as the data.
+*   **JSON Mode**: The spent budget is stored in a local file named `privacy_budget.json` in the working directory.
 
-## Interpretation of Epsilon
+## The Budget Ceiling
 
-Philter Diffuse provides a qualitative interpretation of the epsilon value to help auditors understand the level of protection:
+The `--budget-ceiling` parameter (default: `10.0`) defines the maximum allowed cumulative epsilon. 
 
-| Epsilon Range | Protection Strength |
-|---------------|---------------------|
-| $\epsilon \leq 0.1$ | EXTREME |
-| $0.1 < \epsilon \leq 1.0$ | HIGH |
-| $1.0 < \epsilon \leq 5.0$ | MODERATE |
-| $\epsilon > 5.0$ | LOW (Testing Only) |
+### What happens when the ceiling is reached?
+If a requested query would cause the total spent epsilon to exceed the ceiling, Philter Diffuse takes the following actions to protect the data:
 
-Generally, a lower epsilon provides stronger privacy but less accuracy.
+1.  **Warning**: A prominent warning is printed to the console and included in the audit report.
+2.  **Infinite Noise**: The scale is effectively increased to infinity.
+3.  **Result Suppression**: All privatized counts are returned as `0` (or masked if thresholding is active). 
+4.  **No Budget Consumption**: Since the released result contains no useful information (pure noise), no additional epsilon is deducted from the remaining budget.
+
+## Interpreting Protection Strength
+
+To assist non-technical auditors, Philter Diffuse provides a qualitative interpretation of the cumulative privacy loss:
+
+| Cumulative Epsilon ($\epsilon$) | Protection Strength | Description |
+| :--- | :--- | :--- |
+| $\epsilon \leq 0.1$ | **EXTREME** | Highest level of protection; suitable for extremely sensitive personal data. |
+| $0.1 < \epsilon \leq 1.0$ | **HIGH** | Strong protection; standard for most production use cases. |
+| $1.0 < \epsilon \leq 5.0$ | **MODERATE** | Balanced protection and utility. |
+| $\epsilon > 5.0$ | **LOW** | Useful for testing or less sensitive data; risk of re-identification increases. |
+
+## Managing the Budget
+
+### Resetting the Budget
+If you have refreshed your underlying dataset (e.g., a new month of data) and wish to reset the budget:
+*   **MongoDB**: Delete the document for that collection in the `privacy_metadata` collection.
+*   **JSON**: Edit `privacy_budget.json` and remove the entry for your file, or delete the file entirely.
+
+### Adjusting the Ceiling
+You can increase the ceiling by passing a higher value to the `--budget-ceiling` flag during execution. However, this should only be done after careful consideration of the privacy implications.

@@ -1,16 +1,31 @@
 # Philter Diffuse
 
-Philter Diffuse provides mathematical guarantees for PII count aggregations using [OpenDP](https://github.com/opendp/opendp).
+Philter Diffuse provides mathematical guarantees for PII count aggregations using [OpenDP](https://github.com/opendp/opendp). It is designed for organizations that need to share or publish aggregate statistics about personally identifiable information (PII) without compromising the privacy of individuals represented in the data.
 
-It uses the Discrete Laplace mechanism to privatize PII counts and generates compliance-ready reports with epsilon (privacy loss) interpretation. The tool also features persistent privacy budget tracking to prevent privacy loss exhaustion over time.
+## Overview
 
-Designed to be used with [Phileas](https://www.github.com/philterd/phileas) and [Philter](https://www.github.com/philterd/philter).
+In many data analysis scenarios, simply removing direct identifiers (like names) is insufficient to protect privacy. Aggregate counts can still leak information if an attacker has background knowledge or if the counts are very small. Philter Diffuse addresses this by applying **Differential Privacy**, a rigorous mathematical framework for privacy protection.
+
+It uses the **Discrete Laplace mechanism** to privatize PII counts. This mechanism adds carefully calibrated random noise to the raw counts, ensuring that the presence or absence of any single individual in the dataset has a limited impact on the released results.
+
+## Integration with the Philter Ecosystem
+
+Philter Diffuse is a key component of the Philterd privacy suite, designed to work seamlessly with:
+
+*   **[Philter](https://www.github.com/philterd/philter)**: A PII detection and redaction engine. Philter identifies PII in unstructured text.
+*   **[Phileas](https://www.github.com/philterd/phileas)**: A high-performance PII redaction service.
+
+Typically, Philter or Phileas processes text and generates counts of PII entities found. Philter Diffuse then takes these raw counts and applies differential privacy before they are used for reporting or analytics.
 
 ## Key Features
 
-- **Differential Privacy**: Implements the Discrete Laplace mechanism for robust privacy guarantees.
-- **Privacy Budget Management**: Tracks epsilon spend across queries to prevent privacy leaks.
-- **MongoDB Integration**: Directly fetch PII counts from MongoDB collections.
-- **JSON Support**: Process PII counts from local JSON files.
-- **Audit Reports**: Generates detailed compliance reports with privacy loss interpretation.
-- **Thresholding**: Automatically hide low counts to further protect individual privacy.
+*   **Robust Differential Privacy**: Implements the Discrete Laplace mechanism from the OpenDP library, providing formally provable privacy guarantees.
+*   **Persistent Privacy Budget Management**: Tracks the cumulative "epsilon" (privacy loss) across multiple queries. This prevents "privacy exhaustion," where repeated queries on the same data could eventually reveal individual information.
+*   **Flexible Data Ingestion**:
+    *   **MongoDB Integration**: Directly connect to MongoDB to fetch and privatize counts stored in collections.
+    *   **JSON Support**: Process PII counts from simple local JSON files, making it easy to integrate into existing pipelines.
+*   **Compliance-Ready Audit Reports**: Generates detailed reports for every execution, including qualitative interpretations of the privacy strength (e.g., "EXTREME", "HIGH") to help compliance officers and auditors.
+*   **Safe Output Formatting**:
+    *   **CSV Export**: Results are exported to standard CSV format for easy consumption by downstream tools.
+    *   **Thresholding**: Automatically suppresses counts below a user-defined threshold (e.g., showing "None" for counts less than 5) to provide an additional layer of protection against re-identification.
+*   **Dockerized Deployment**: Easily deployable via Docker for consistent and isolated execution environments.
