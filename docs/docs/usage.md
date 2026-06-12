@@ -39,14 +39,33 @@ The JSON file should be a simple flat object where keys represent the PII type a
 
 ## Command Line Options
 
-| Option | Long Flag | Description | Default |
-| :--- | :--- | :--- | :--- |
-| `-i` | `--input` | Path to a local JSON file containing PII counts. If omitted, MongoDB mode is used. | `None` |
-| `-m` | `--mongo-uri` | The connection string for your MongoDB instance. | `mongodb://localhost:27017/philter` |
-| `-s` | `--scale` | The **scale** parameter for the Laplace noise. A higher scale adds more noise (more privacy, less accuracy). | `2.0` |
-| `-o` | `--output` | **[Required]** The file path where the privatized CSV results will be saved. | `None` |
-| `-t` | `--threshold` | Results with a privatized count below this value will be masked as `None` in the output. | `0` |
-| `-b` | `--budget-ceiling` | The maximum cumulative privacy budget (epsilon) allowed for a single source. | `10.0` |
+| Flag | Description | Default |
+| :--- | :--- | :--- |
+| `--input` | Path to a local JSON file containing PII counts. If omitted, MongoDB mode is used. | `None` |
+| `--mongo-uri` | The connection string for your MongoDB instance. | `mongodb://localhost:27017/philter` |
+| `--scale` | The **scale** parameter for the Laplace noise. A higher scale adds more noise (more privacy, less accuracy). | `2.0` |
+| `--output` | **[Required]** The file path where the privatized CSV results will be saved. | `None` |
+| `--threshold` | Results with a privatized count below this value will be masked as `None` in the output. | `0` |
+| `--budget-ceiling` | The maximum cumulative privacy budget (epsilon) allowed for a single source. | `10.0` |
+| `--aggregates` | Read Philter's aggregated, document-presence PII counts from the `pii_count_aggregates` collection instead of counting documents per field. MongoDB mode only. | off |
+| `--context` | When using `--aggregates`, restrict to a single Philter context. | all contexts |
+| `--version` | Print the Philter Diffuse version and exit. | |
+
+Run `python main.py --help` to see this list from the tool itself.
+
+### 3. Reading Philter's PII counts (`--aggregates`)
+
+When Philter is configured to record PII count statistics, it writes document-presence counts to a `pii_count_aggregates` collection: one document per `(context, day)`, each holding a `counts` map of `{pii_type: number-of-documents-containing-it}`. Instead of counting documents field by field, point Philter Diffuse at those aggregates directly:
+
+```bash
+python main.py --mongo-uri "mongodb://localhost:27017/philter" --aggregates --output privatized_counts.csv
+```
+
+Philter Diffuse sums the buckets into a single `{pii_type: total}` map and privatizes that. Because each redaction contributes at most one to any type's count (document presence), summing across buckets preserves the differential-privacy `sensitivity = 1` assumption the guarantee relies on. Restrict to one Philter context with `--context`:
+
+```bash
+python main.py --mongo-uri "mongodb://localhost:27017/philter" --aggregates --context billing --output privatized_counts.csv
+```
 
 ---
 

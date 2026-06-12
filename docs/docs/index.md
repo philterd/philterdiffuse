@@ -17,6 +17,10 @@ Philter Diffuse is a key component of the Philterd privacy suite, designed to wo
 
 Typically, Philter or Phileas processes text and generates counts of PII entities found. Philter Diffuse then takes these raw counts and applies differential privacy before they are used for reporting or analytics.
 
+## Get Started
+
+New to Philter Diffuse? The [Quickstart](quickstart.md) takes you from a clean checkout to a privatized CSV and an audit report in about five minutes, no database required. For the current release state and maturity, see [Project Status](status.md).
+
 ## Key Features
 
 *   **Robust Differential Privacy**: Implements the Discrete Laplace mechanism from the OpenDP library, providing formally provable privacy guarantees.
@@ -28,4 +32,5 @@ Typically, Philter or Phileas processes text and generates counts of PII entitie
 *   **Safe Output Formatting**:
     *   **CSV Export**: Results are exported to standard CSV format for easy consumption by downstream tools.
     *   **Thresholding**: Automatically suppresses counts below a user-defined threshold (e.g., showing "None" for counts less than 5) to provide an additional layer of protection against re-identification.
+*   **Reads Philter Telemetry Directly**: Privatizes Philter's aggregated, document-presence PII counts (the `pii_count_aggregates` collection) with `--aggregates`, so you can run safe analytics on your own redaction telemetry.
 *   **Dockerized Deployment**: Easily deployable via Docker for consistent and isolated execution environments.

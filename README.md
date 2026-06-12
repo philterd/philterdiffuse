@@ -6,7 +6,11 @@ It uses the Discrete Laplace mechanism to privatize PII counts and generates com
 
 Designed to be used with [Phileas](https://www.github.com/philterd/phileas) and [Philter](https://www.github.com/philterd/philter).
 
-View the documentation at https://philterd.github.io/philterdiffuse.
+View the documentation at https://philterd.github.io/philterdiffuse. New users should start with the [Quickstart](https://philterd.github.io/philterdiffuse/quickstart/).
+
+## Project Status
+
+Philter Diffuse is early-access software at version `0.1.0`. The differential-privacy mechanism, budget accounting, and CLI are usable and tested, but as a `0.x` release the interface may change before a stable `1.0`. See [Project Status](https://philterd.github.io/philterdiffuse/status/) for the maturity checklist and roadmap. Check your checkout with `python main.py --version`.
 
 ## Installation
 
@@ -66,6 +70,18 @@ If the `--budget-ceiling` is reached, the tool will notify the user, apply infin
 | `--output` | Path to write the privatized PII counts to a CSV file. | **Required** | None |
 | `--threshold` | Counts below this threshold will be output as `None`. | Optional | `0` |
 | `--budget-ceiling` | The maximum total epsilon allowed per collection. | Optional | `10.0` |
+| `--aggregates` | Read [Philter's](https://www.github.com/philterd/philter) aggregated, document-presence PII counts from the `pii_count_aggregates` collection (summing the per-`(context, day)` count buckets that Philter writes) instead of counting documents per field. | Optional | off |
+| `--context` | When using `--aggregates`, restrict to a single Philter context. | Optional | all contexts |
+
+### Reading Philter's PII counts
+
+When Philter is configured to record PII count statistics, it writes document-presence counts to a `pii_count_aggregates` collection (one document per `(context, day)`). Use `--aggregates` to privatize those counts directly:
+
+```bash
+python main.py --mongo-uri "mongodb://localhost:27017/philter" --aggregates --output privatized_counts.csv
+```
+
+These are document-presence counts (each redaction contributes at most one per type), which matches the differential-privacy `sensitivity = 1` assumption.
 
 ## License
 

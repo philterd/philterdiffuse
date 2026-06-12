@@ -13,6 +13,8 @@ theme:
 nav:
   - Home: index.md
   - Installation: installation.md
+  - Quickstart: quickstart.md
   - Usage: usage.md
   - Privacy Budget: privacy-budget.md
+  - Project Status: status.md
   - FAQ: faq.md

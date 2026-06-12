@@ -21,6 +21,11 @@ import sys
 import opendp.prelude as dp
 from pymongo import MongoClient
 
+# Project version. Philter Diffuse is early-access (0.x): the differential-privacy
+# mechanism and CLI are usable and tested, but the interface may still change
+# before a 1.0 release. See docs/docs/status.md for the maturity checklist.
+__version__ = "0.1.0"
+
 # Enable OpenDP features for 2026 stability
 dp.enable_features("contrib")
 
@@ -100,6 +105,31 @@ class PhilterDiffuse:
             count = self.collection.count_documents({field: {"$exists": True}})
             raw_counts[field] = count
         return raw_counts
+
+    def fetch_pii_count_aggregates(self, context=None):
+        """
+        Sums Philter's aggregated, document-presence PII counts from the
+        ``pii_count_aggregates`` collection that Philter writes. Philter stores one document
+        per (context, day) with a ``counts`` map of {pii_type: number-of-documents-containing-it}.
+        This returns a flat {pii_type: total} map summed across the selected buckets.
+
+        Because each redaction contributes at most one to any type's count (document presence),
+        summing across buckets preserves the sensitivity=1 assumption that the differential-privacy
+        guarantee relies on. Optionally restrict to a single ``context``.
+        """
+        if not self.client:
+            raise ValueError("MongoDB client not initialized. Cannot fetch counts from database.")
+
+        query = {}
+        if context is not None:
+            query["context"] = context
+
+        totals = {}
+        for doc in self.db["pii_count_aggregates"].find(query):
+            counts = doc.get("counts") or {}
+            for pii_type, count in counts.items():
+                totals[pii_type] = totals.get(pii_type, 0) + int(count)
+        return totals
 
     def load_counts_from_json(self, file_path):
         """
@@ -213,13 +243,16 @@ class PhilterDiffuse:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Philter Diffuse: Differential Privacy Engine.")
+    parser.add_argument("--version", action="version", version=f"Philter Diffuse {__version__}")
     parser.add_argument("--input", type=str, help="Path to a JSON document containing PII entity counts.")
     parser.add_argument("--mongo-uri", type=str, default="mongodb://localhost:27017/philter", help="MongoDB connection URI (format: mongodb://host:port/database).")
     parser.add_argument("--scale", type=float, default=2.0, help="Scale for Laplace noise (higher = more privacy, less accuracy).")
     parser.add_argument("--output", type=str, required=True, help="Path to write the privatized PII counts to a CSV file.")
     parser.add_argument("--threshold", type=int, default=0, help="Counts below this threshold will be output as 'None'.")
     parser.add_argument("--budget-ceiling", type=float, default=10.0, help="The maximum total epsilon allowed per collection.")
-    
+    parser.add_argument("--aggregates", action="store_true", help="Read Philter's aggregated, document-presence PII counts from the pii_count_aggregates collection (written by Philter) instead of counting documents per field.")
+    parser.add_argument("--context", type=str, default=None, help="When reading aggregates, restrict to a single Philter context.")
+
     args = parser.parse_args()
 
     FIELDS_TO_MONITOR = ["creditcard", "ssn", "age", "zipcode"]
@@ -237,8 +270,11 @@ if __name__ == "__main__":
             try:
                 engine = PhilterDiffuse(args.mongo_uri)
                 # 1. Fetch raw data
-                # Attempt to fetch from DB
-                raw_data = engine.fetch_pii_counts(FIELDS_TO_MONITOR)
+                if args.aggregates:
+                    # Sum Philter's document-presence aggregates (the recommended source).
+                    raw_data = engine.fetch_pii_count_aggregates(context=args.context)
+                else:
+                    raw_data = engine.fetch_pii_counts(FIELDS_TO_MONITOR)
             except Exception as e:
                 print(f"Error: MongoDB connection failed: {e}")
                 sys.exit(1)

@@ -108,6 +108,31 @@ class TestPhilterDiffuse(unittest.TestCase):
         self.assertIn("age", counts)
         self.assertIn("zipcode", counts)
 
+    def test_fetch_pii_count_aggregates_sums_across_buckets(self):
+        # Philter writes one document per (context, day) with a document-presence counts map.
+        self.engine.db["pii_count_aggregates"].insert_many([
+            {"context": "ctx-a", "bucket_start": "2026-05-30", "counts": {"SSN": 5, "EMAIL_ADDRESS": 100}, "total_documents": 120},
+            {"context": "ctx-a", "bucket_start": "2026-05-31", "counts": {"SSN": 3, "PERSON": 9}, "total_documents": 50},
+            {"context": "ctx-b", "bucket_start": "2026-05-31", "counts": {"SSN": 2}, "total_documents": 10},
+        ])
+
+        totals = self.engine.fetch_pii_count_aggregates()
+        self.assertEqual(totals["SSN"], 10)  # 5 + 3 + 2 across all buckets
+        self.assertEqual(totals["EMAIL_ADDRESS"], 100)
+        self.assertEqual(totals["PERSON"], 9)
+
+    def test_fetch_pii_count_aggregates_filters_by_context(self):
+        self.engine.db["pii_count_aggregates"].insert_many([
+            {"context": "ctx-a", "bucket_start": "2026-05-31", "counts": {"SSN": 3}},
+            {"context": "ctx-b", "bucket_start": "2026-05-31", "counts": {"SSN": 2}},
+        ])
+        self.assertEqual(self.engine.fetch_pii_count_aggregates(context="ctx-a"), {"SSN": 3})
+
+    def test_fetch_pii_count_aggregates_no_client(self):
+        engine_no_client = PhilterDiffuse(collection_name="json_mode")
+        with self.assertRaises(ValueError):
+            engine_no_client.fetch_pii_count_aggregates()
+
     def test_load_counts_from_json(self):
         test_data = {"field1": 10, "field2": 20}
         file_path = "test_counts.json"
